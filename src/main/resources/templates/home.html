@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Coronavirus tracker</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://drvic10k.github.io/bootstrap-sortable/Contents/bootstrap-sortable.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.19.1/moment.js"></script>
+    <script src="https://drvic10k.github.io/bootstrap-sortable/Scripts/bootstrap-sortable.js"></script>
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="container">
+<h1>Coronavirus Tracker Application</h1>
+<p>This application tracks current number of total cases per country/region. Updated every 24 hours.</p>
+
+
+    <div class="jumbotron">
+        <h1 class="display-4" th:text="${totalConfirmedCases}"></h1>
+        <p class="lead">Total cases reported</p>
+        <hr class="my-4">
+        <p>
+            <span>New cases in the last 24 hours: </span>
+            <span th:text="${newConfirmedCases}"></span>
+        </p>
+            <i>Includes data up until:</i>
+            <span class="font-italic" th:text="${fetchDate}"></span>
+    </div>
+
+
+    <table class="table table-striped table-bordered table-sm sortable">
+        <thead>
+        <tr>
+            <th>Country</th>
+            <th>Total cases reported</th>
+            <th>Cases since previous day</th>
+            <th>Deaths</th>
+            <th>Deaths since previous day</th>
+            <th>Deaths to cases ratio (%)</th>
+            <th>Recovered</th>
+        </tr>
+        </thead>
+        <tr th:each="locationStat : ${locationStats}">
+            <td><a href="plot.html" th:href="@{/plot(country=${locationStat.countrymin})}" th:text="${locationStat.country}"></a></td>
+<!--            <td th:text="${locationStat.country}"></td>-->
+            <td style="text-align:center" th:text="${locationStat.latestTotalCases}">0</td>
+            <td style="text-align:center" th:text="${locationStat.casesDiff}">0</td>
+            <td style="text-align:center" th:text="${locationStat.deaths}">0</td>
+            <td style="text-align:center" th:text="${locationStat.deathsDiff}">0</td>
+            <td style="text-align:center" th:text="${locationStat.getDeathRatio()}">0</td>
+            <td style="text-align:center" th:text="${locationStat.recovered}">0</td>
+        </tr>
+    </table>
+
+</div>
+</body>
+
+</html>
