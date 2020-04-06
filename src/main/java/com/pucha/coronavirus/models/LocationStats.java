@@ -5,6 +5,7 @@ import java.text.DecimalFormat;
 public class LocationStats {
     private String country;
     private String countrymin;
+    private int casesPer100k;
     private int latestTotalCases;
     private int casesDiff;
     private int deathsDiff;
@@ -73,6 +74,14 @@ public class LocationStats {
 
     public void setLatestTotalCases(int latestTotalCases) {
         this.latestTotalCases = latestTotalCases;
+    }
+
+    public int getCasesPer100k() {
+        return casesPer100k;
+    }
+
+    public void setCasesPer100k(int casesPer100k) {
+        this.casesPer100k = casesPer100k;
     }
 
     @Override

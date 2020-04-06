@@ -17,6 +17,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.sql.Time;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -30,6 +31,7 @@ public class CoronaVirusDataService {
     private String VIRUS_DATA_DAILY_URL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/";
     private String VIRUS_DATA_CONFIRMED_URL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv";
     private String VIRUS_DATA_DEATHS_URL = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv";
+    private String POPULATION_DATA_URL = "https://datacenter.prb.org/download/international/indicator/population/csv";
     private HttpClient client = HttpClient.newHttpClient();
 
     private List<LocationStats> allStats = new ArrayList<>();
@@ -38,7 +40,7 @@ public class CoronaVirusDataService {
     @PostConstruct
     @Scheduled(cron = "0 0 * * * *")
     public void fetchVirusData() throws IOException, InterruptedException {
-        System.out.println("Fetching new data");
+        System.out.println("Fetching new virus data");
         fetchTimeSeries();
         fetchLocationStats();
     }
@@ -97,6 +99,24 @@ public class CoronaVirusDataService {
                 locationStat.setDeathsDiff(deathsDiff);
             }
         }
+        NationalDataFetcher nationalDataFetcher = new NationalDataFetcher(POPULATION_DATA_URL, client);
+        Map<String, Double> countryPopulations = nationalDataFetcher.fetchPopulations();
+        for (LocationStats locationStats: newStats) {
+            Double population = countryPopulations.get(locationStats.getCountry());
+            locationStats.setCasesPer100k((int) (locationStats.getLatestTotalCases()/(population*10)));
+        }
+
+        LocationStats world = new LocationStats();
+        world.setCountry("World");
+        world.setCountrymin("world");
+        world.setLatestTotalCases(newStats.stream().mapToInt(LocationStats::getLatestTotalCases).sum());
+        world.setCasesDiff(newStats.stream().mapToInt(LocationStats::getCasesDiff).sum());
+        world.setDeaths(newStats.stream().mapToInt(LocationStats::getDeaths).sum());
+        world.setDeathsDiff(newStats.stream().mapToInt(LocationStats::getDeathsDiff).sum());
+        world.setCasesPer100k((int) (world.getLatestTotalCases()/(countryPopulations.get("World")*10)));
+        world.setRecovered(newStats.stream().mapToInt(LocationStats::getRecovered).sum());
+        newStats.add(world);
+
         newStats.sort(Comparator.comparingInt(LocationStats::getLatestTotalCases).reversed());
         this.allStats = newStats;
     }
@@ -136,7 +156,7 @@ public class CoronaVirusDataService {
             if (oldConfirmed == null) {
                 totalConfirmed = newConfirmed;
             } else {
-                totalConfirmed = addLists(newConfirmed, oldConfirmed);
+                totalConfirmed = sumLists(newConfirmed, oldConfirmed);
             }
             timeSeries.setConfirmed(totalConfirmed);
         }
@@ -156,15 +176,29 @@ public class CoronaVirusDataService {
             if (oldDeaths == null){
                 totalDeaths = newDeaths;
             } else {
-                totalDeaths = addLists(newDeaths, oldDeaths);
+                totalDeaths = sumLists(newDeaths, oldDeaths);
             }
             timeSeries.setDeaths(totalDeaths);
         }
+
+        int seriesLength = newTimeSeries.get(0).getConfirmed().size();
+        TimeSeries worldTimeSeries = new TimeSeries();
+        worldTimeSeries.setCountry("World");
+        List<Integer> worldConfirmed = Arrays.stream(new int[seriesLength]).boxed().collect(Collectors.toList());
+        List<Integer> worldDeaths = Arrays.stream(new int[seriesLength]).boxed().collect(Collectors.toList());
+        for (TimeSeries ts: newTimeSeries) {
+            worldConfirmed = sumLists(worldConfirmed, ts.getConfirmed());
+            worldDeaths = sumLists(worldDeaths, ts.getDeaths());
+        }
+        worldTimeSeries.setConfirmed(worldConfirmed);
+        worldTimeSeries.setDeaths(worldDeaths);
+        newTimeSeries.add(worldTimeSeries);
+        
         allTimeSeries = newTimeSeries;
         allDates = newDates;
     }
 
-    private List<Integer> addLists(List<Integer> oneList, List<Integer> otherList) {
+    private List<Integer> sumLists(List<Integer> oneList, List<Integer> otherList) {
         List<Integer> newList = new ArrayList<>();
         for (int i = 0; i < oneList.size(); i++) {
             newList.add(oneList.get(i) + otherList.get(i));
@@ -210,25 +244,51 @@ public class CoronaVirusDataService {
         return lineChartData;
     }
 
-    public Object[][] getColumnChartData(TimeSeries countryTimeSeries) {
-        List<Integer> cases = countryTimeSeries.getConfirmed();
-        List<Integer> casesDiffs = new ArrayList<>();
-        for (int i = 1; i < cases.size(); i++) {
-            casesDiffs.add(cases.get(i)-cases.get(i-1));
+    public Object[][] getColumnChartData(TimeSeries countryTimeSeries, String category) {
+        List<Integer> ydata;
+        String ylabel;
+        if (category.equals("deaths")) {
+            ydata = countryTimeSeries.getDeaths();
+            ylabel = "New Deaths";
+        } else {
+            ydata = countryTimeSeries.getConfirmed();
+            ylabel = "New Cases";
+        }
+
+        List<Integer> dataDiffs = new ArrayList<>();
+        for (int i = 1; i < ydata.size(); i++) {
+            dataDiffs.add(ydata.get(i)-ydata.get(i-1));
         }
         Object[][] columnChartData = new Object[allDates.size()][2];
-        columnChartData[0] = new Object[]{"Date", "New Cases"};
-        for (int i = 0; i < casesDiffs.size(); i++) {
-            columnChartData[i+1] = new Object[]{allDates.get(i+1), casesDiffs.get(i)};
+        columnChartData[0] = new Object[]{"Date", ylabel};
+        for (int i = 0; i < dataDiffs.size(); i++) {
+            columnChartData[i+1] = new Object[]{allDates.get(i+1), dataDiffs.get(i)};
         }
         return columnChartData;
     }
 
     public int getTotalConfirmedCases() {
-        return allStats.stream().mapToInt(LocationStats::getLatestTotalCases).sum();
+        return allStats.stream().filter(x->!x.getCountry().equals("World"))
+                .mapToInt(LocationStats::getLatestTotalCases).sum();
     }
 
     public int getNewConfirmedCases() {
-        return allStats.stream().mapToInt(LocationStats::getCasesDiff).sum();
+        return allStats.stream().filter(x->!x.getCountry().equals("World"))
+                .mapToInt(LocationStats::getCasesDiff).sum();
+    }
+
+    public int getTotalDeaths() {
+        return allStats.stream().filter(x->!x.getCountry().equals("World"))
+                .mapToInt(LocationStats::getDeaths).sum();
+    }
+
+    public int getNewDeaths() {
+        return allStats.stream().filter(x->!x.getCountry().equals("World"))
+                .mapToInt(LocationStats::getDeathsDiff).sum();
+    }
+
+    public int getTotalRecovered() {
+        return allStats.stream().filter(x->!x.getCountry().equals("World"))
+                .mapToInt(LocationStats::getRecovered).sum();
     }
 }

@@ -42,6 +42,7 @@
             <th>Deaths</th>
             <th>Deaths since previous day</th>
             <th>Deaths to cases ratio (%)</th>
+            <th>Cases per 100k population</th>
             <th>Recovered</th>
         </tr>
         </thead>
@@ -53,6 +54,7 @@
             <td style="text-align:center" th:text="${locationStat.deaths}">0</td>
             <td style="text-align:center" th:text="${locationStat.deathsDiff}">0</td>
             <td style="text-align:center" th:text="${locationStat.getDeathRatio()}">0</td>
+            <td style="text-align:center" th:text="${locationStat.getCasesPer100k()}">0</td>
             <td style="text-align:center" th:text="${locationStat.recovered}">0</td>
         </tr>
     </table>

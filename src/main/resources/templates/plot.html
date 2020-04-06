@@ -13,7 +13,8 @@
 
       // Set a callback to run when the Google Visualization API is loaded.
       google.charts.setOnLoadCallback(drawLineChart);
-      google.charts.setOnLoadCallback(drawColumnChart);
+      google.charts.setOnLoadCallback(drawColumnChartConfirmed);
+      google.charts.setOnLoadCallback(drawColumnChartDeaths);
 
       // Callback that creates and populates a data table,
       // instantiates the pie chart, passes in the data and
@@ -35,8 +36,8 @@ var data = new google.visualization.arrayToDataTable([[${lineChartData}]]);
       chart.draw(data, google.charts.Line.convertOptions(options));
     }
 
-    function drawColumnChart() {
-        var data = google.visualization.arrayToDataTable([[${columnChartData}]]);
+    function drawColumnChartConfirmed() {
+        var data = google.visualization.arrayToDataTable([[${columnChartConfirmed}]]);
 
         var options = {
           chart: {
@@ -46,7 +47,24 @@ var data = new google.visualization.arrayToDataTable([[${lineChartData}]]);
           height: 500
         };
 
-        var chart = new google.charts.Bar(document.getElementById('columnchart_material'));
+        var chart = new google.charts.Bar(document.getElementById('columnchart_confirmed'));
+
+        chart.draw(data, google.charts.Bar.convertOptions(options));
+      }
+
+      function drawColumnChartDeaths() {
+        var data = google.visualization.arrayToDataTable([[${columnChartDeaths}]]);
+
+        var options = {
+          chart: {
+            title: 'Daily deaths',
+          },
+          width: 900,
+          height: 500,
+          colors: ['#CD2626']
+        };
+
+        var chart = new google.charts.Bar(document.getElementById('columnchart_deaths'));
 
         chart.draw(data, google.charts.Bar.convertOptions(options));
       }
@@ -58,7 +76,8 @@ var data = new google.visualization.arrayToDataTable([[${lineChartData}]]);
 <h1 th:text="${country}"></h1>
 <!--Div that will hold the chart-->
 <div id="linechart_material"></div>
-<div id="columnchart_material"></div>
+<div id="columnchart_confirmed"></div>
+<div id="columnchart_deaths"></div>
     <hr>
 </div>
 </body>
