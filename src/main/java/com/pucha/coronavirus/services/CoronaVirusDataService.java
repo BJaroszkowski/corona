@@ -62,7 +62,9 @@ public class CoronaVirusDataService {
         for(CSVRecord record: recordsDaily) {
             String country = record.get("Country_Region");
             int latestTotalCases = Integer.parseInt(record.get("Confirmed"));
-            int recovered = Integer.parseInt(record.get("Recovered"));
+            String recoveredString = record.get("Recovered");
+            if (recoveredString.isEmpty()) recoveredString = "0";
+            int recovered = Integer.parseInt(recoveredString);
             int deaths = Integer.parseInt(record.get("Deaths"));
             LocationStats existing = newStats.stream()
                     .filter(stat -> stat.getCountry().equals(country))
@@ -102,7 +104,11 @@ public class CoronaVirusDataService {
         NationalDataFetcher nationalDataFetcher = new NationalDataFetcher(POPULATION_DATA_URL, client);
         Map<String, Double> countryPopulations = nationalDataFetcher.fetchPopulations();
         for (LocationStats locationStats: newStats) {
-            Double population = countryPopulations.get(locationStats.getCountry());
+            String country = locationStats.getCountry();
+            if (!countryPopulations.containsKey(country)) {
+                System.out.println(country);
+            }
+            Double population = countryPopulations.get(country);
             locationStats.setCasesPer100k((int) (locationStats.getLatestTotalCases()/(population*10)));
         }
 

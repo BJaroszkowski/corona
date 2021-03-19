@@ -74,6 +74,9 @@ public class NationalDataFetcher {
                     case "St. Vincent and the Grenadines":
                         country = "Saint Vincent and the Grenadines";
                         break;
+                    case "Federated States of Micronesia":
+                        country = "Micronesia";
+                        break;
                 }
                 countryPopulations.put(country, Double.parseDouble(record.get("Data")));
             }else if (record.get("Type").equals("World")) {
